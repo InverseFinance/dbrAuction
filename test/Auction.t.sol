@@ -192,30 +192,18 @@ contract AuctionTest is Test {
         assertEq(auction.dolaReserve(), 1e18 + dolaIn);
     }
 
-    function test_buyDBRWithHandlerWithCapacity(uint dolaIn) public {
+    function test_sendToSaleHandler(uint dolaIn) public {
         dolaIn = bound(dolaIn, 1, type(uint).max - 1e18); // max dola in = (max uint - dola reserve)
         MockSaleHandler handler = new MockSaleHandler();
+        vm.expectRevert("No sale handler");
+        auction.sendToSaleHandler();
         vm.prank(gov);
         auction.setSaleHandler(address(handler));
-        dola.mint(address(this), dolaIn);
-        dola.approve(address(auction), dolaIn);
-        handler.setCapacity(dolaIn);
-        auction.buyDBR(dolaIn, 0); // 0 capacity
-        assertEq(dola.balanceOf(address(auction)), 0);
-        assertEq(dola.balanceOf(address(handler)), dolaIn);
+        dola.mint(address(auction), dolaIn);
+        handler.setCapacity(dolaIn - 1);
+        auction.sendToSaleHandler();
+        assertEq(dola.balanceOf(address(auction)), 1);
+        assertEq(dola.balanceOf(address(handler)), dolaIn - 1);
         assertEq(handler.received(), true);
-    }
-
-    function test_buyDBRWithHandlerNoCapacity(uint dolaIn) public {
-        dolaIn = bound(dolaIn, 1, type(uint).max - 1e18); // max dola in = (max uint - dola reserve)
-        MockSaleHandler handler = new MockSaleHandler();
-        vm.prank(gov);
-        auction.setSaleHandler(address(handler));
-        dola.mint(address(this), dolaIn);
-        dola.approve(address(auction), dolaIn);
-        auction.buyDBR(dolaIn, 0); // 0 capacity
-        assertEq(dola.balanceOf(address(auction)), dolaIn);
-        assertEq(dola.balanceOf(address(handler)), 0);
-        assertEq(handler.received(), false);
     }
 }

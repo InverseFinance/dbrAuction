@@ -49,7 +49,7 @@ contract SaleHandler {
     }
 
     function getCapacity() external view returns (uint) {
-        return getDebtOf(borrower1) + getDebtOf(borrower2);
+        return getDebtOf(borrower1) + getDebtOf(borrower2) - dola.balanceOf(address(this));
     }
 
 }

@@ -4,6 +4,7 @@ pragma solidity 0.8.21;
 interface IERC20 {
     function transfer(address,uint) external returns (bool);
     function transferFrom(address,address,uint) external returns (bool);
+    function balanceOf(address) external view returns (uint);
 }
 
 interface IDBR is IERC20 {
@@ -131,13 +132,18 @@ contract Auction {
         dolaReserve += dolaIn;
         dbrReserve -= _dbrOut;
         dbr.mint(msg.sender, _dbrOut);
-        if(address(saleHandler) == address(0) || saleHandler.getCapacity() < dolaIn) {
-            dola.transferFrom(msg.sender, address(this), dolaIn);
-        } else {
-            dola.transferFrom(msg.sender, address(saleHandler), dolaIn);
-            saleHandler.onReceive();
-        }
+        dola.transferFrom(msg.sender, address(this), dolaIn);
         emit Buy(msg.sender, dolaIn, _dbrOut);
+    }
+
+    function sendToSaleHandler() public {
+        require(address(saleHandler) != address(0), "No sale handler");
+        uint bal = dola.balanceOf(address(this));
+        require(bal > 0, "No DOLA to send");
+        uint capacity = saleHandler.getCapacity();
+        uint amount = bal > capacity ? capacity : bal;
+        dola.transfer(address(saleHandler), amount);
+        saleHandler.onReceive();
     }
 
     function sweep(address token, address destination, uint amount) external onlyGov {
