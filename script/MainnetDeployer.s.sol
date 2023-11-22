@@ -21,7 +21,7 @@ contract MainnetDeployerScript is Script {
 
         // 5:1 ratio, implying a 20c DBR starting price
         uint dolaReserve = 500_000 * 1e18;
-        uint dbrReserve = 2_500_000 * 1e18;
+        uint dbrReserve = dolaReserve * 5;
 
         SaleHandler handler = new SaleHandler(
             dola,
