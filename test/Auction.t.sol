@@ -34,6 +34,7 @@ contract AuctionTest is Test {
             operator,
             address(dbr),
             address(dola),
+            address(0),
             1e18,
             1e18
         );

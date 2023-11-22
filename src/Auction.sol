@@ -33,6 +33,7 @@ contract Auction {
         address _operator,
         address _dbr,
         address _dola,
+        address handler,
         uint _dolaReserve,
         uint _dbrReserve
     ) {
@@ -42,6 +43,7 @@ contract Auction {
         operator = _operator;
         dbr = IDBR(_dbr);
         dola = IERC20(_dola);
+        saleHandler = ISaleHandler(handler);
         dolaReserve = _dolaReserve;
         dbrReserve = _dbrReserve;
     }
