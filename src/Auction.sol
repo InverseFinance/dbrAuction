@@ -18,6 +18,7 @@ interface ISaleHandler {
 
 contract Auction {
 
+    uint256 internal constant MAX_UINT256 = 2**256 - 1;
     address public gov;
     address public operator;
     IDBR public immutable dbr;
@@ -78,13 +79,6 @@ contract Auction {
         }
     }
 
-    function getDbrOut(uint _dolaIn) public view returns (uint _dbrOut) {
-        (uint _dolaReserve, uint _dbrReserve) = getCurrentReserves();
-        uint K = _dolaReserve * _dbrReserve;
-        _dolaReserve += _dolaIn;
-        _dbrOut = _dbrReserve - (K / _dolaReserve);
-    }
-
     function setGov(address _gov) external onlyGov { gov = _gov; }
     function setOperator(address _operator) external onlyGov { operator = _operator; }
     function setSaleHandler(address _saleHandler) external onlyGov { saleHandler = ISaleHandler(_saleHandler); }
@@ -126,14 +120,14 @@ contract Auction {
         lastUpdate = block.timestamp;
     }
 
-    function buyDBR(uint dolaIn, uint minDbrOut) external updateReserves returns (uint _dbrOut) {
-        _dbrOut = getDbrOut(dolaIn);
-        require(_dbrOut >= minDbrOut, "Insufficient DBR amount out");
-        dolaReserve += dolaIn;
-        dbrReserve -= _dbrOut;
-        dbr.mint(msg.sender, _dbrOut);
-        dola.transferFrom(msg.sender, address(this), dolaIn);
-        emit Buy(msg.sender, dolaIn, _dbrOut);
+    function buyDBR(uint exactDolaIn, uint exactDbrOut, address to) external updateReserves {
+        uint K = dolaReserve * dbrReserve;
+        dolaReserve += exactDolaIn;
+        dbrReserve -= exactDbrOut;
+        require(dolaReserve * dbrReserve >= K, "Invariant");
+        dola.transferFrom(msg.sender, address(this), exactDolaIn);
+        dbr.mint(to, exactDbrOut);
+        emit Buy(msg.sender, to, exactDolaIn, exactDbrOut);
     }
 
     function sendToSaleHandler() public {
@@ -150,7 +144,7 @@ contract Auction {
         IERC20(token).transfer(destination, amount);
     }
 
-    event Buy(address indexed caller, uint dolaIn, uint dbrOut);
+    event Buy(address indexed caller, address indexed to, uint dolaIn, uint dbrOut);
     event RateUpdate(uint newRate);
     event MaxRateUpdate(uint newMaxRate);
 }

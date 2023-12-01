@@ -4,6 +4,7 @@ pragma solidity 0.8.21;
 import {Script, console2} from "forge-std/Script.sol";
 import {SaleHandler} from "../src/SaleHandler.sol";
 import {Auction} from "../src/Auction.sol";
+import {Helper} from "../src/Helper.sol";
 
 contract MainnetDeployerScript is Script {
     function setUp() public {}
@@ -30,7 +31,7 @@ contract MainnetDeployerScript is Script {
             borrower2
         );
 
-        new Auction(
+        Auction auction = new Auction(
             gov,
             fedChair,
             dbr,
@@ -38,6 +39,11 @@ contract MainnetDeployerScript is Script {
             address(handler),
             dolaReserve,
             dbrReserve
+        );
+
+        new Helper(
+            address(auction),
+            address(dola)
         );
     }
 }

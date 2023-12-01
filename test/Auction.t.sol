@@ -66,15 +66,6 @@ contract AuctionTest is Test {
         assertApproxEqAbs(_dbrReserve, 2 * 1e18, 1e8);
     }
 
-    function test_getDbrOut(uint dolaIn) public {
-        dolaIn = bound(dolaIn, 0, type(uint).max - 1e18); // max dola in = (max uint - dola reserve)
-        uint x = 1e18;
-        uint y = 1e18;
-        uint K = x * y;
-        uint yOut = x - (K / (x + dolaIn));
-        assertEq(auction.getDbrOut(dolaIn), yOut);
-    }
-
     function test_setGov() public {
         vm.expectRevert("onlyGov");
         auction.setGov(address(0));
@@ -176,22 +167,6 @@ contract AuctionTest is Test {
         assertEq(dola.balanceOf(address(this)), 1);
     }
 
-    function test_buyDBR(uint dolaIn) public {
-        dolaIn = bound(dolaIn, 0, type(uint).max - 1e18); // max dola in = (max uint - dola reserve)
-        dola.mint(address(this), dolaIn);
-        dola.approve(address(auction), dolaIn);
-        auction.buyDBR(dolaIn, 0);
-        uint x = 1e18;
-        uint y = 1e18;
-        uint K = x * y;
-        uint yOut = x - (K / (x + dolaIn));
-        assertEq(dola.balanceOf(address(this)), 0);
-        assertEq(dola.balanceOf(address(auction)), dolaIn);
-        assertEq(dbr.balanceOf(address(this)), yOut);
-        assertEq(auction.dbrReserve(), 1e18 - yOut);
-        assertEq(auction.dolaReserve(), 1e18 + dolaIn);
-    }
-
     function test_sendToSaleHandler(uint dolaIn) public {
         dolaIn = bound(dolaIn, 1, type(uint).max - 1e18); // max dola in = (max uint - dola reserve)
         MockSaleHandler handler = new MockSaleHandler();
@@ -206,4 +181,27 @@ contract AuctionTest is Test {
         assertEq(dola.balanceOf(address(handler)), dolaIn - 1);
         assertEq(handler.received(), true);
     }
+
+    function test_buyDBR(uint exactDolaIn, uint exactDbrOut) public {
+        exactDbrOut = bound(exactDbrOut, 1, auction.dbrReserve());
+        exactDolaIn = bound(exactDolaIn, 0, (type(uint).max - auction.dolaReserve()) / auction.dbrReserve() - exactDbrOut);
+        dola.mint(address(this), exactDolaIn);
+        dola.approve(address(auction), exactDolaIn);
+        uint K = auction.dolaReserve() * auction.dbrReserve();
+        uint newDbrReserve = auction.dbrReserve() - exactDbrOut;
+        uint newDolaReserve = auction.dolaReserve() + exactDolaIn;
+        uint newK = newDolaReserve * newDbrReserve;
+        if(newK < K) {
+            vm.expectRevert("Invariant");
+            auction.buyDBR(exactDolaIn, exactDbrOut, address(1));
+        } else {
+            auction.buyDBR(exactDolaIn, exactDbrOut, address(1));
+            assertEq(dola.balanceOf(address(this)), 0);
+            assertEq(dola.balanceOf(address(auction)), exactDolaIn);
+            assertEq(dbr.balanceOf(address(1)), exactDbrOut);
+            assertEq(auction.dbrReserve(), newDbrReserve);
+            assertEq(auction.dolaReserve(), newDolaReserve);
+        }
+    }
+
 }
