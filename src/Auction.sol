@@ -18,7 +18,6 @@ interface ISaleHandler {
 
 contract Auction {
 
-    uint256 internal constant MAX_UINT256 = 2**256 - 1;
     address public gov;
     address public operator;
     IDBR public immutable dbr;
