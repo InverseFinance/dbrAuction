@@ -69,7 +69,7 @@ contract Auction {
         uint timeElapsed = block.timestamp - lastUpdate;
         if(timeElapsed > 0) {
             uint K = dolaReserve * dbrReserve;
-            uint DbrsIn = timeElapsed * (dbrRatePerYear / 365 days);
+            uint DbrsIn = timeElapsed * dbrRatePerYear / 365 days;
             _dbrReserve = dbrReserve + DbrsIn;
             _dolaReserve = K / _dbrReserve;
         } else {
