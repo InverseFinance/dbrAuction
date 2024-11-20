@@ -17,7 +17,7 @@ contract MockAnDola {
     }
 
     function repayBorrowBehalf(address _borrower, uint _repayAmount) external returns (uint) {
-        require(_repayAmount <= borrowBalanceStored[_borrower], "Insufficient debt");
+        if (_repayAmount > borrowBalanceStored[_borrower]) return 1;
         borrower = _borrower;
         repayAmount = _repayAmount;
         dola.transferFrom(msg.sender, address(this), _repayAmount);
@@ -104,12 +104,21 @@ contract SaleHandlerTest is Test {
         assertEq(dola.balanceOf(BENEFICIARY), beneficiaryAmount);
     }
 
-    function test_getCapacity(uint debt1, uint debt2) public {
-        debt1 = bound(debt1, 1, type(uint128).max);
-        debt2 = bound(debt2, 1, type(uint128).max);
-        anDola.setBorrowBalance(BORROWER1, debt1);
-        anDola.setBorrowBalance(BORROWER2, debt2);
-        assertEq(handler.getCapacity(), debt1 + debt2);
+    function test_onReceiveExcessToBeneficiary(uint amount) public {
+        amount = bound(amount, 2, type(uint128).max);
+        uint debtAmount = amount - 1; // Create a smaller debt than the received amount
+        
+        dola.mint(address(handler), amount);
+        anDola.setBorrowBalance(BORROWER1, debtAmount);
+        
+        handler.onReceive();
+        
+        assertEq(anDola.repayAmount(), 0);
+        assertEq(dola.balanceOf(BENEFICIARY), amount);
+    }
+
+    function test_getCapacity() public {
+        assertEq(handler.getCapacity(), type(uint).max);
     }
 
     function test_setOwner() public {

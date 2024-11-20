@@ -55,12 +55,13 @@ contract SaleHandler {
         uint debt2 = getDebtOf(borrower2);
         if(debt1 > debt2) {
             uint errCode = anDola.repayBorrowBehalf(borrower1, repayment);
-            if(errCode > 0) require(anDola.repayBorrowBehalf(borrower2, repayment) == 0, "Failed to repay");
+            if(errCode > 0) anDola.repayBorrowBehalf(borrower2, repayment);
         } else {
             uint errCode = anDola.repayBorrowBehalf(borrower2, repayment);
-            if(errCode > 0) require(anDola.repayBorrowBehalf(borrower1, repayment) == 0, "Failed to repay");
+            if(errCode > 0) anDola.repayBorrowBehalf(borrower1, repayment);
         }
 
+        // recalculating remaining in case of failure to repay above
         uint remaining = dola.balanceOf(address(this));
         if(remaining > 0) dola.transfer(beneficiary, remaining);
     }
@@ -70,7 +71,8 @@ contract SaleHandler {
     }
 
     function getCapacity() external view returns (uint) {
-        return getDebtOf(borrower1) + getDebtOf(borrower2) - dola.balanceOf(address(this));
+        // excess goes to beneficiary
+        return type(uint).max;
     }
 
     function setOwner(address _owner) external onlyOwner { owner = _owner; }
