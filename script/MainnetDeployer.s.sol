@@ -23,8 +23,14 @@ contract MainnetDeployerScript is Script {
         // 5:1 ratio, implying a 20c DBR starting price
         uint dolaReserve = 500_000 * 1e18;
         uint dbrReserve = dolaReserve * 5;
+        
+        // 50% goes to repay, 50% goes to beneficiary
+        uint repayBps = 5000;
 
         SaleHandler handler = new SaleHandler(
+            gov,
+            gov,
+            repayBps,
             dola,
             anDola,
             borrower1,
