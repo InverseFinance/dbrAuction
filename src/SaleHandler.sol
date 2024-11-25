@@ -63,7 +63,7 @@ contract SaleHandler {
 
         // recalculating remaining in case of failure to repay above
         uint remaining = dola.balanceOf(address(this));
-        if(remaining > 0) dola.transfer(beneficiary, remaining);
+        if(remaining > 0 && beneficiary != address(0)) dola.transfer(beneficiary, remaining);
     }
 
     function getDebtOf(address borrower) internal view returns (uint) {
