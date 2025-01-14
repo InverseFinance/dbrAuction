@@ -18,13 +18,13 @@ contract HandlerMainnetDeployerScript is Script {
         address borrower1 = 0xf508c58ce37ce40a40997C715075172691F92e2D;
         address borrower2 = 0xeA0c959BBb7476DDD6cD4204bDee82b790AA1562;
         
-        // 50% goes to repayments, 50% goes to beneficiary
-        uint repayBps = 5000;
+        // 30% minimum goes to repayments, 70% goes to beneficiary
+        uint minRepayBps = 3000;
 
         new SaleHandler(
             gov,
             beneficiary,
-            repayBps,
+            minRepayBps,
             dola,
             anDola,
             borrower1,
