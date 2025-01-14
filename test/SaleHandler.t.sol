@@ -44,7 +44,7 @@ contract SaleHandlerTest is Test {
     address constant NON_OWNER = address(4);
     address constant NEW_OWNER = address(5);
     address constant NEW_BENEFICIARY = address(6);
-    uint256 constant INITIAL_REPAY_BPS = 10000;
+    uint256 constant MIN_REPAY_BPS = 0;
 
     function setUp() public {
         dola = new ERC20();
@@ -52,7 +52,7 @@ contract SaleHandlerTest is Test {
         handler = new SaleHandler(
             OWNER,
             BENEFICIARY,
-            INITIAL_REPAY_BPS,
+            MIN_REPAY_BPS,
             address(dola),
             address(anDola),
             BORROWER1,
@@ -65,7 +65,8 @@ contract SaleHandlerTest is Test {
         assertEq(address(handler.anDola()), address(anDola));
         assertEq(handler.borrower1(), BORROWER1);
         assertEq(handler.borrower2(), BORROWER2);
-        assertEq(handler.repayBps(), INITIAL_REPAY_BPS);
+        assertEq(handler.minRepayBps(), MIN_REPAY_BPS);
+        assertEq(handler.repayBps(), 10000);
         assertEq(handler.owner(), OWNER);
         assertEq(handler.beneficiary(), BENEFICIARY);
         assertEq(dola.allowance(address(handler), address(anDola)), type(uint).max);
@@ -161,9 +162,31 @@ contract SaleHandlerTest is Test {
         handler.setBeneficiary(NEW_BENEFICIARY);
     }
 
-    function test_fail_onlyOwnerCanSetRepayBps() public {
+    function test_fail_onlyOwnerOrBeneficiaryCanSetRepayBps() public {
         vm.prank(NON_OWNER);
-        vm.expectRevert("Only owner can call this function");
+        vm.expectRevert("Only beneficiary or owner can call this function");
         handler.setRepayBps(5000);
+    }
+
+    function test_fail_setRepayBpsBelowMinRepayBps() public {
+        vm.prank(OWNER);
+        handler.setMinRepayBps(5000);
+        vm.expectRevert("Repay bps must be greater than or equal to minRepayBps");
+        handler.setRepayBps(4999);
+    }
+
+    function test_setMinRepayBps() public {
+        vm.prank(OWNER);
+        handler.setMinRepayBps(5000);
+        assertEq(handler.minRepayBps(), 5000);
+    }
+
+    function test_setMinRepayBpsBelowRepayBps() public {
+        vm.prank(OWNER);
+        handler.setRepayBps(0);
+        assertEq(handler.repayBps(), 0);
+        vm.prank(OWNER);
+        handler.setMinRepayBps(1000);
+        assertEq(handler.repayBps(), 1000);
     }
 }

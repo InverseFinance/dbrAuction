@@ -20,7 +20,8 @@ contract SaleHandler {
     IAnDola public immutable anDola;
     address public immutable borrower1;
     address public immutable borrower2;
-    uint public repayBps;
+    uint public minRepayBps;
+    uint public repayBps = 10000; // initializes to 100%
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Only owner can call this function");
@@ -30,16 +31,16 @@ contract SaleHandler {
     constructor(
         address _owner,
         address _beneficiary,
-        uint _repayBps,
+        uint _minRepayBps,
         address _dola,
         address _anDola,
         address _borrower1,
         address _borrower2
     ) {
-        require(_repayBps <= 10000, "Repay bps must be less than or equal to 10000");
+        require(_minRepayBps <= 10000, "Minimum repay bps must be less than or equal to 10000");
         owner = _owner;
         beneficiary = _beneficiary;
-        repayBps = _repayBps;
+        minRepayBps = _minRepayBps;
         dola = IERC20(_dola);
         anDola = IAnDola(_anDola);
         borrower1 = _borrower1;
@@ -79,9 +80,17 @@ contract SaleHandler {
 
     function setBeneficiary(address _beneficiary) external onlyOwner { beneficiary = _beneficiary; }
 
-    function setRepayBps(uint _repayBps) external onlyOwner {
+    function setRepayBps(uint _repayBps) external {
+        require(msg.sender == beneficiary || msg.sender == owner, "Only beneficiary or owner can call this function");
         require(_repayBps <= 10000, "Repay bps must be less than or equal to 10000");
+        require(_repayBps >= minRepayBps, "Repay bps must be greater than or equal to minRepayBps");
         repayBps = _repayBps;
+    }
+
+    function setMinRepayBps(uint _minRepayBps) external onlyOwner {
+        require(_minRepayBps <= 10000, "Minimum repay bps must be less than or equal to 10000");
+        minRepayBps = _minRepayBps;
+        if(repayBps < _minRepayBps) repayBps = _minRepayBps;
     }
 
 }
