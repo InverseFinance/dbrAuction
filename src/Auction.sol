@@ -26,7 +26,8 @@ contract Auction {
     uint public assetReserve;
     uint public dbrReserve;
     uint public dbrRatePerYear;
-    uint public maxDbrRatePerYear;
+    uint public minDbrRatePerYear;
+    uint public maxDbrRatePerYear = type(uint).max;
     uint public lastUpdate;
     
     constructor (
@@ -83,6 +84,7 @@ contract Auction {
     function setSaleHandler(address _saleHandler) external onlyGov { saleHandler = ISaleHandler(_saleHandler); }
 
     function setMaxDbrRatePerYear(uint _maxRate) external onlyGov updateReserves {
+        require(_maxRate >= minDbrRatePerYear, "Max below min");
         maxDbrRatePerYear = _maxRate;
         emit MaxRateUpdate(_maxRate);
         if(dbrRatePerYear > _maxRate) {
@@ -91,12 +93,24 @@ contract Auction {
         }
     }
 
+    function setMinDbrRatePerYear(uint _minRate) external onlyGov updateReserves {
+        require(_minRate <= maxDbrRatePerYear, "Min above max");
+        minDbrRatePerYear = _minRate;
+        emit MinRateUpdate(_minRate);
+        if(dbrRatePerYear < _minRate) {
+            dbrRatePerYear = _minRate;
+            emit RateUpdate(_minRate);
+        }
+    }
+
     function setDbrRatePerYear(uint _rate) external onlyGovOrOperator updateReserves {
         require(_rate <= maxDbrRatePerYear, "Rate exceeds max");
+        require(_rate >= minDbrRatePerYear, "Rate below min");
         dbrRatePerYear = _rate;
         emit RateUpdate(_rate);
     }
 
+    // changes K to preserve the ratio (price)
     function setAssetReserve(uint _assetReserve) external onlyGov updateReserves {
         require(_assetReserve > 0, "Asset reserve must be positive");
         uint newDbrReserve = _assetReserve * dbrReserve / assetReserve;
@@ -105,6 +119,7 @@ contract Auction {
         dbrReserve = newDbrReserve;
     }
 
+    // changes K to preserve the ratio (price)
     function setDbrReserve(uint _dbrReserve) external onlyGov updateReserves {
         require(_dbrReserve > 0, "DBR reserve must be positive");
         uint newAssetReserve = _dbrReserve * assetReserve / dbrReserve;
@@ -148,4 +163,5 @@ contract Auction {
     event Buy(address indexed caller, address indexed to, uint assetIn, uint dbrOut);
     event RateUpdate(uint newRate);
     event MaxRateUpdate(uint newMaxRate);
+    event MinRateUpdate(uint newMinRate);
 }
