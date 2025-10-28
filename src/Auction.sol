@@ -156,6 +156,14 @@ contract Auction {
         saleHandler.onReceive();
     }
 
+    // only if no sale handler is set
+    function sendToGov() public {
+        require(address(saleHandler) == address(0), "Sale handler set");
+        uint bal = asset.balanceOf(address(this));
+        require(bal > 0, "No asset to send");
+        asset.transfer(gov, bal);
+    }
+
     function sweep(address token, address destination, uint amount) external onlyGov {
         IERC20(token).transfer(destination, amount);
     }
