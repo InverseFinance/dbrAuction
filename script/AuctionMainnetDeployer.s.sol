@@ -11,6 +11,9 @@ contract AuctionMainnetDeployerScript is Script {
     function run() public {
         vm.startBroadcast();
 
+        // Optional: specify a handler address to deploy with
+        address handler = address(0);
+
         address gov = 0x926dF14a23BE491164dCF93f4c468A50ef659D5B;
         address fedChair = 0x8F97cCA30Dbe80e7a8B462F1dD1a51C32accDfC8;
         address asset = 0x865377367054516e17014CcdED1e7d814EDC9ce4;
@@ -25,7 +28,7 @@ contract AuctionMainnetDeployerScript is Script {
             fedChair,
             dbr,
             asset,
-            address(0),
+            handler,
             assetReserve,
             dbrReserve
         );

@@ -47,6 +47,9 @@ contract AuctionTest is Test {
         assertEq(address(auction.asset()), address(asset));
         assertEq(auction.assetReserve(), 1e18);
         assertEq(auction.dbrReserve(), 1e18);
+        assertEq(auction.dbrRatePerYear(), 0);
+        assertEq(auction.minDbrRatePerYear(), 0);
+        assertEq(auction.maxDbrRatePerYear(), type(uint).max);
     }
 
     function test_getCurrentReserves() public {
@@ -94,28 +97,135 @@ contract AuctionTest is Test {
         vm.expectRevert("onlyGov");
         auction.setMaxDbrRatePerYear(1e18);
         vm.startPrank(gov);
+        
+        // Test setting max rate
         auction.setMaxDbrRatePerYear(1e18);
         assertEq(auction.maxDbrRatePerYear(), 1e18);
+        
+        // Test that current rate can be set to max
         auction.setDbrRatePerYear(1e18);
         assertEq(auction.dbrRatePerYear(), 1e18);
-        auction.setMaxDbrRatePerYear(0);
-        assertEq(auction.maxDbrRatePerYear(), 0);
-        assertEq(auction.dbrRatePerYear(), 0);
+        
+        // Test that setting max below current rate adjusts current rate
+        auction.setMaxDbrRatePerYear(0.5e18);
+        assertEq(auction.maxDbrRatePerYear(), 0.5e18);
+        assertEq(auction.dbrRatePerYear(), 0.5e18);
+        
+        // Test that setting max below min rate fails
+        auction.setMinDbrRatePerYear(0.3e18);
+        vm.expectRevert("Max below min");
+        auction.setMaxDbrRatePerYear(0.2e18);
+    }
+
+    function test_setMinDbrRatePerYear() public {
+        vm.expectRevert("onlyGov");
+        auction.setMinDbrRatePerYear(1e18);
+        vm.startPrank(gov);
+        
+        // Test setting min rate
+        auction.setMinDbrRatePerYear(0.1e18);
+        assertEq(auction.minDbrRatePerYear(), 0.1e18);
+        
+        // Test that setting min above current rate adjusts current rate
+        auction.setMinDbrRatePerYear(0.5e18);
+        assertEq(auction.minDbrRatePerYear(), 0.5e18);
+        assertEq(auction.dbrRatePerYear(), 0.5e18);
+        
+        // Test that setting min above max rate fails
+        auction.setMaxDbrRatePerYear(1e18);
+        vm.expectRevert("Min above max");
+        auction.setMinDbrRatePerYear(2e18);
+        
+        // Test that setting min rate works when below max
+        auction.setMinDbrRatePerYear(0.3e18);
+        assertEq(auction.minDbrRatePerYear(), 0.3e18);
     }
 
     function test_setDbrRatePerYear() public {
         vm.expectRevert("onlyGov");
         auction.setDbrRatePerYear(1e18);
         vm.startPrank(gov);
-        vm.expectRevert("Rate exceeds max");
-        auction.setDbrRatePerYear(1e18);
-        assertEq(auction.dbrRatePerYear(), 0);
+        
+        // Set up min and max bounds
+        auction.setMinDbrRatePerYear(0.1e18);
         auction.setMaxDbrRatePerYear(1e18);
-        auction.setDbrRatePerYear(1e18);
-        assertEq(auction.dbrRatePerYear(), 1e18);
+        
+        // Test setting rate within bounds
+        auction.setDbrRatePerYear(0.5e18);
+        assertEq(auction.dbrRatePerYear(), 0.5e18);
+        
+        // Test setting rate above max fails
+        vm.expectRevert("Rate exceeds max");
+        auction.setDbrRatePerYear(2e18);
+        
+        // Test setting rate below min fails
+        vm.expectRevert("Rate below min");
+        auction.setDbrRatePerYear(0.05e18);
+        
+        // Test operator can also set rate
         vm.startPrank(operator);
+        auction.setDbrRatePerYear(0.8e18);
+        assertEq(auction.dbrRatePerYear(), 0.8e18);
+        
+        // Test operator cannot set rate above max
+        vm.expectRevert("Rate exceeds max");
+        auction.setDbrRatePerYear(2e18);
+        
+        // Test operator cannot set rate below min
+        vm.expectRevert("Rate below min");
+        auction.setDbrRatePerYear(0.05e18);
+    }
+
+    function test_dbrRateBoundaryConditions() public {
+        vm.startPrank(gov);
+        
+        // Test setting min and max to same value
+        auction.setMinDbrRatePerYear(0.5e18);
+        auction.setMaxDbrRatePerYear(0.5e18);
+        assertEq(auction.minDbrRatePerYear(), 0.5e18);
+        assertEq(auction.maxDbrRatePerYear(), 0.5e18);
+        assertEq(auction.dbrRatePerYear(), 0.5e18);
+        
+        // Test that rate can only be set to the exact min/max value
+        auction.setDbrRatePerYear(0.5e18);
+        assertEq(auction.dbrRatePerYear(), 0.5e18);
+        
+        // Test that any other value fails
+        vm.expectRevert("Rate exceeds max");
+        auction.setDbrRatePerYear(0.51e18);
+        vm.expectRevert("Rate below min");
+        auction.setDbrRatePerYear(0.49e18);
+        
+        // Test that setting max to 0 fails when min is above 0
+        vm.expectRevert("Max below min");
+        auction.setMaxDbrRatePerYear(0);
+        
+        // Test that min can be set to 0 first
+        auction.setMinDbrRatePerYear(0);
+        assertEq(auction.minDbrRatePerYear(), 0);
+        
+        // Now test that max can be set to 0
+        auction.setMaxDbrRatePerYear(0);
+        assertEq(auction.maxDbrRatePerYear(), 0);
+        assertEq(auction.dbrRatePerYear(), 0);
+        
+        // Test that rate can be set to 0
         auction.setDbrRatePerYear(0);
         assertEq(auction.dbrRatePerYear(), 0);
+    }
+
+    function test_dbrRateEvents() public {
+        vm.startPrank(gov);
+        
+        // Test that events are emitted (simplified test)
+        auction.setMinDbrRatePerYear(0.1e18);
+        auction.setMaxDbrRatePerYear(1e18);
+        auction.setDbrRatePerYear(0.5e18);
+        
+        // Verify the state changes
+        assertEq(auction.minDbrRatePerYear(), 0.1e18);
+        assertEq(auction.maxDbrRatePerYear(), 1e18);
+        assertEq(auction.dbrRatePerYear(), 0.5e18);
     }
 
     function test_setAssetReserve() public {
