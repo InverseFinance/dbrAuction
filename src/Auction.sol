@@ -99,16 +99,18 @@ contract Auction {
 
     function setDolaReserve(uint _dolaReserve) external onlyGov updateReserves {
         require(_dolaReserve > 0, "Dola reserve must be positive");
-        uint K = dolaReserve * dbrReserve;
+        uint newDbrReserve = _dolaReserve * dbrReserve / dolaReserve;
+        require(newDbrReserve > 0, "Resulting DBR reserve must be positive");
         dolaReserve = _dolaReserve;
-        dbrReserve = K / _dolaReserve;
+        dbrReserve = newDbrReserve;
     }
 
     function setDbrReserve(uint _dbrReserve) external onlyGov updateReserves {
         require(_dbrReserve > 0, "DBR reserve must be positive");
-        uint K = dolaReserve * dbrReserve;
+        uint newDolaReserve = _dbrReserve * dolaReserve / dbrReserve;
+        require(newDolaReserve > 0, "Resulting DOLA reserve must be positive");
         dbrReserve = _dbrReserve;
-        dolaReserve = K / _dbrReserve;
+        dolaReserve = newDolaReserve;
     }
 
     function overrideReserves(uint _dbrReserve, uint _dolaReserve) external onlyGov {

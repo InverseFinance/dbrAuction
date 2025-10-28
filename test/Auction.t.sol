@@ -124,9 +124,18 @@ contract AuctionTest is Test {
         vm.startPrank(gov);
         vm.expectRevert("Dola reserve must be positive");
         auction.setDolaReserve(0);
-        auction.setDolaReserve(1e19);
-        assertEq(auction.dolaReserve(), 1e19);
-        assertEq(auction.dbrReserve(), 1e17);
+        uint oldDolaReserve = auction.dolaReserve();
+        uint oldDbrReserve = auction.dbrReserve();
+        uint ratioMantissaBefore = oldDbrReserve * 1e18 / oldDolaReserve;
+        uint newDolaReserve = 1e19;
+        uint expectedDbrReserve = newDolaReserve * oldDbrReserve / oldDolaReserve;
+        auction.setDolaReserve(newDolaReserve);
+        uint updatedDolaReserve = auction.dolaReserve();
+        uint updatedDbrReserve = auction.dbrReserve();
+        assertEq(updatedDolaReserve, newDolaReserve);
+        assertEq(updatedDbrReserve, expectedDbrReserve);
+        uint ratioMantissaAfter = updatedDbrReserve * 1e18 / updatedDolaReserve;
+        assertEq(ratioMantissaAfter, ratioMantissaBefore);
     }
 
     function test_setDbrReserve() public {
@@ -135,9 +144,18 @@ contract AuctionTest is Test {
         vm.startPrank(gov);
         vm.expectRevert("DBR reserve must be positive");
         auction.setDbrReserve(0);
-        auction.setDbrReserve(1e19);
-        assertEq(auction.dolaReserve(), 1e17);
-        assertEq(auction.dbrReserve(), 1e19);
+        uint oldDolaReserve = auction.dolaReserve();
+        uint oldDbrReserve = auction.dbrReserve();
+        uint ratioMantissaBefore = oldDbrReserve * 1e18 / oldDolaReserve;
+        uint newDbrReserve = 1e19;
+        uint expectedDolaReserve = newDbrReserve * oldDolaReserve / oldDbrReserve;
+        auction.setDbrReserve(newDbrReserve);
+        uint updatedDbrReserve = auction.dbrReserve();
+        uint updatedDolaReserve = auction.dolaReserve();
+        assertEq(updatedDbrReserve, newDbrReserve);
+        assertEq(updatedDolaReserve, expectedDolaReserve);
+        uint ratioMantissaAfter = updatedDbrReserve * 1e18 / updatedDolaReserve;
+        assertEq(ratioMantissaAfter, ratioMantissaBefore);
     }
 
     function test_overrideReserves() public {
