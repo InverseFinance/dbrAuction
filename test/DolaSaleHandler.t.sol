@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import {Test, console2} from "forge-std/Test.sol";
-import {SaleHandler} from "../src/SaleHandler.sol";
+import {DolaSaleHandler} from "../src/DolaSaleHandler.sol";
 import {ERC20} from "./mocks/ERC20.sol";
 
 contract MockAnDola {
@@ -27,15 +27,15 @@ contract MockAnDola {
 
 contract SaleHandlerTest is Test {
 
-    ERC20 dola;
+    ERC20 asset;
     MockAnDola anDola;
-    SaleHandler handler;
+    DolaSaleHandler handler;
 
     function setUp() public {
-        dola = new ERC20();
+        asset = new ERC20();
         anDola = new MockAnDola();
-        handler = new SaleHandler(
-            address(dola),
+        handler = new DolaSaleHandler(
+            address(asset),
             address(anDola),
             address(1),
             address(2)
@@ -43,16 +43,16 @@ contract SaleHandlerTest is Test {
     }
 
     function test_constructor() public {
-        assertEq(address(handler.dola()), address(dola));
+        assertEq(address(handler.asset()), address(asset));
         assertEq(address(handler.anDola()), address(anDola));
         assertEq(handler.borrower1(), address(1));
         assertEq(handler.borrower2(), address(2));
-        assertEq(dola.allowance(address(handler), address(anDola)), type(uint).max);
+        assertEq(asset.allowance(address(handler), address(anDola)), type(uint).max);
     }
 
     function test_onReceiveBorrower1(uint amount) public {
         amount = bound(amount, 1, type(uint).max / 2);
-        dola.mint(address(handler), amount);
+        asset.mint(address(handler), amount);
         anDola.setBorrowBalance(address(1), amount);
         handler.onReceive();
         assertEq(anDola.borrower(), address(1));
@@ -61,7 +61,7 @@ contract SaleHandlerTest is Test {
 
     function test_onReceiveBorrower2(uint amount) public {
         amount = bound(amount, 1, type(uint).max / 2);
-        dola.mint(address(handler), amount);
+        asset.mint(address(handler), amount);
         anDola.setBorrowBalance(address(2), amount);
         handler.onReceive();
         assertEq(anDola.borrower(), address(2));

@@ -11,28 +11,28 @@ interface IAnDola {
     function borrowBalanceStored(address account) external view returns (uint); // stored is good enough for our use case
 }
 
-contract SaleHandler {
+contract DolaSaleHandler {
 
-    IERC20 public immutable dola;
+    IERC20 public immutable asset;
     IAnDola public immutable anDola;
     address public immutable borrower1;
     address public immutable borrower2;
 
     constructor(
-        address _dola,
+        address _asset,
         address _anDola,
         address _borrower1,
         address _borrower2
     ) {
-        dola = IERC20(_dola);
+        asset = IERC20(_asset);
         anDola = IAnDola(_anDola);
         borrower1 = _borrower1;
         borrower2 = _borrower2;
-        dola.approve(_anDola,type(uint).max);
+        asset.approve(_anDola,type(uint).max);
     }
 
     function onReceive() external {
-        uint bal = dola.balanceOf(address(this));
+        uint bal = asset.balanceOf(address(this));
         uint debt1 = getDebtOf(borrower1);
         uint debt2 = getDebtOf(borrower2);
         if(debt1 > debt2) {
@@ -49,7 +49,7 @@ contract SaleHandler {
     }
 
     function getCapacity() external view returns (uint) {
-        return getDebtOf(borrower1) + getDebtOf(borrower2) - dola.balanceOf(address(this));
+        return getDebtOf(borrower1) + getDebtOf(borrower2) - asset.balanceOf(address(this));
     }
 
 }

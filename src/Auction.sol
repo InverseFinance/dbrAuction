@@ -21,9 +21,9 @@ contract Auction {
     address public gov;
     address public operator;
     IDBR public immutable dbr;
-    IERC20 public immutable dola;
+    IERC20 public immutable asset;
     ISaleHandler public saleHandler;
-    uint public dolaReserve;
+    uint public assetReserve;
     uint public dbrReserve;
     uint public dbrRatePerYear;
     uint public maxDbrRatePerYear;
@@ -33,24 +33,24 @@ contract Auction {
         address _gov,
         address _operator,
         address _dbr,
-        address _dola,
+        address _asset,
         address handler,
-        uint _dolaReserve,
+        uint _assetReserve,
         uint _dbrReserve
     ) {
-        require(_dolaReserve > 0, "Dola reserve must be positive");
+        require(_assetReserve > 0, "Asset reserve must be positive");
         require(_dbrReserve > 0, "DBR reserve must be positive");
         gov = _gov;
         operator = _operator;
         dbr = IDBR(_dbr);
-        dola = IERC20(_dola);
+        asset = IERC20(_asset);
         saleHandler = ISaleHandler(handler);
-        dolaReserve = _dolaReserve;
+        assetReserve = _assetReserve;
         dbrReserve = _dbrReserve;
     }
 
     modifier updateReserves {
-        (dolaReserve, dbrReserve) = getCurrentReserves();
+        (assetReserve, dbrReserve) = getCurrentReserves();
         lastUpdate = block.timestamp;
         _;
     }
@@ -65,15 +65,15 @@ contract Auction {
         _;
     }
 
-    function getCurrentReserves() public view returns (uint _dolaReserve, uint _dbrReserve) {
+    function getCurrentReserves() public view returns (uint _assetReserve, uint _dbrReserve) {
         uint timeElapsed = block.timestamp - lastUpdate;
         if(timeElapsed > 0) {
-            uint K = dolaReserve * dbrReserve;
+            uint K = assetReserve * dbrReserve;
             uint DbrsIn = timeElapsed * dbrRatePerYear / 365 days;
             _dbrReserve = dbrReserve + DbrsIn;
-            _dolaReserve = K / _dbrReserve;
+            _assetReserve = K / _dbrReserve;
         } else {
-            _dolaReserve = dolaReserve;
+            _assetReserve = assetReserve;
             _dbrReserve = dbrReserve;
         }
     }
@@ -97,47 +97,47 @@ contract Auction {
         emit RateUpdate(_rate);
     }
 
-    function setDolaReserve(uint _dolaReserve) external onlyGov updateReserves {
-        require(_dolaReserve > 0, "Dola reserve must be positive");
-        uint newDbrReserve = _dolaReserve * dbrReserve / dolaReserve;
+    function setAssetReserve(uint _assetReserve) external onlyGov updateReserves {
+        require(_assetReserve > 0, "Asset reserve must be positive");
+        uint newDbrReserve = _assetReserve * dbrReserve / assetReserve;
         require(newDbrReserve > 0, "Resulting DBR reserve must be positive");
-        dolaReserve = _dolaReserve;
+        assetReserve = _assetReserve;
         dbrReserve = newDbrReserve;
     }
 
     function setDbrReserve(uint _dbrReserve) external onlyGov updateReserves {
         require(_dbrReserve > 0, "DBR reserve must be positive");
-        uint newDolaReserve = _dbrReserve * dolaReserve / dbrReserve;
-        require(newDolaReserve > 0, "Resulting DOLA reserve must be positive");
+        uint newAssetReserve = _dbrReserve * assetReserve / dbrReserve;
+        require(newAssetReserve > 0, "Resulting asset reserve must be positive");
         dbrReserve = _dbrReserve;
-        dolaReserve = newDolaReserve;
+        assetReserve = newAssetReserve;
     }
 
-    function overrideReserves(uint _dbrReserve, uint _dolaReserve) external onlyGov {
-        require(_dolaReserve > 0, "Dola reserve must be positive");
+    function overrideReserves(uint _dbrReserve, uint _assetReserve) external onlyGov {
+        require(_assetReserve > 0, "Asset reserve must be positive");
         require(_dbrReserve > 0, "DBR reserve must be positive");
-        dolaReserve = _dolaReserve;
+        assetReserve = _assetReserve;
         dbrReserve = _dbrReserve;
         lastUpdate = block.timestamp;
     }
 
-    function buyDBR(uint exactDolaIn, uint exactDbrOut, address to) external updateReserves {
-        uint K = dolaReserve * dbrReserve;
-        dolaReserve += exactDolaIn;
+    function buyDBR(uint exactAssetIn, uint exactDbrOut, address to) external updateReserves {
+        uint K = assetReserve * dbrReserve;
+        assetReserve += exactAssetIn;
         dbrReserve -= exactDbrOut;
-        require(dolaReserve * dbrReserve >= K, "Invariant");
-        dola.transferFrom(msg.sender, address(this), exactDolaIn);
+        require(assetReserve * dbrReserve >= K, "Invariant");
+        asset.transferFrom(msg.sender, address(this), exactAssetIn);
         dbr.mint(to, exactDbrOut);
-        emit Buy(msg.sender, to, exactDolaIn, exactDbrOut);
+        emit Buy(msg.sender, to, exactAssetIn, exactDbrOut);
     }
 
     function sendToSaleHandler() public {
         require(address(saleHandler) != address(0), "No sale handler");
-        uint bal = dola.balanceOf(address(this));
-        require(bal > 0, "No DOLA to send");
+        uint bal = asset.balanceOf(address(this));
+        require(bal > 0, "No asset to send");
         uint capacity = saleHandler.getCapacity();
         uint amount = bal > capacity ? capacity : bal;
-        dola.transfer(address(saleHandler), amount);
+        asset.transfer(address(saleHandler), amount);
         saleHandler.onReceive();
     }
 
@@ -145,7 +145,7 @@ contract Auction {
         IERC20(token).transfer(destination, amount);
     }
 
-    event Buy(address indexed caller, address indexed to, uint dolaIn, uint dbrOut);
+    event Buy(address indexed caller, address indexed to, uint assetIn, uint dbrOut);
     event RateUpdate(uint newRate);
     event MaxRateUpdate(uint newMaxRate);
 }
