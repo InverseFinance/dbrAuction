@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+
 interface IERC20 {
-    function approve(address,uint) external returns (bool);
     function balanceOf(address) external view returns (uint);
 }
 
@@ -12,6 +13,8 @@ interface IAnDola {
 }
 
 contract DolaSaleHandler {
+
+    using SafeTransferLib for address;
 
     IERC20 public immutable asset;
     IAnDola public immutable anDola;
@@ -28,7 +31,7 @@ contract DolaSaleHandler {
         anDola = IAnDola(_anDola);
         borrower1 = _borrower1;
         borrower2 = _borrower2;
-        asset.approve(_anDola,type(uint).max);
+        address(asset).safeApprove(_anDola, type(uint).max);
     }
 
     function onReceive() external {

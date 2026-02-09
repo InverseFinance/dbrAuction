@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+
 interface IERC20 {
-    function transfer(address,uint) external returns (bool);
-    function transferFrom(address,address,uint) external returns (bool);
     function balanceOf(address) external view returns (uint);
 }
 
@@ -17,6 +17,8 @@ interface ISaleHandler {
 }
 
 contract Auction {
+
+    using SafeTransferLib for address;
 
     address public gov;
     address public operator;
@@ -141,7 +143,7 @@ contract Auction {
         assetReserve += exactAssetIn;
         dbrReserve -= exactDbrOut;
         require(assetReserve * dbrReserve >= K, "Invariant");
-        asset.transferFrom(msg.sender, address(this), exactAssetIn);
+        address(asset).safeTransferFrom(msg.sender, address(this), exactAssetIn);
         dbr.mint(to, exactDbrOut);
         emit Buy(msg.sender, to, exactAssetIn, exactDbrOut);
     }
@@ -152,7 +154,7 @@ contract Auction {
         require(bal > 0, "No asset to send");
         uint capacity = saleHandler.getCapacity();
         uint amount = bal > capacity ? capacity : bal;
-        asset.transfer(address(saleHandler), amount);
+        address(asset).safeTransfer(address(saleHandler), amount);
         saleHandler.onReceive();
     }
 
@@ -161,11 +163,11 @@ contract Auction {
         require(address(saleHandler) == address(0), "Sale handler set");
         uint bal = asset.balanceOf(address(this));
         require(bal > 0, "No asset to send");
-        asset.transfer(gov, bal);
+        address(asset).safeTransfer(gov, bal);
     }
 
     function sweep(address token, address destination, uint amount) external onlyGov {
-        IERC20(token).transfer(destination, amount);
+        token.safeTransfer(destination, amount);
     }
 
     event Buy(address indexed caller, address indexed to, uint assetIn, uint dbrOut);

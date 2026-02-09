@@ -1,17 +1,20 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+
 interface IAuction {
     function getCurrentReserves() external view returns (uint assetReserve, uint dbrReserve);
     function buyDBR(uint exactAssetIn, uint exactDbrOut, address to) external;
 }
 
 interface IERC20 {
-    function approve(address,uint) external returns (bool);
-    function transferFrom(address,address,uint) external returns (bool);
+    function balanceOf(address) external view returns (uint);
 }
 
 contract Helper {
+
+    using SafeTransferLib for address;
 
     IAuction public immutable auction;
     IERC20 public immutable asset;
@@ -22,7 +25,7 @@ contract Helper {
     ) {
         auction = IAuction(_auction);
         asset = IERC20(_asset);
-        asset.approve(_auction, type(uint).max);
+        address(asset).safeApprove(_auction, type(uint).max);
     }
     
     function getDbrOut(uint assetIn) public view returns (uint dbrOut) {
@@ -44,14 +47,14 @@ contract Helper {
     function swapExactAssetForDbr(uint assetIn, uint dbrOutMin) external returns (uint dbrOut) {
         dbrOut = getDbrOut(assetIn);
         require(dbrOut >= dbrOutMin, "dbrOut must be greater than dbrOutMin");
-        asset.transferFrom(msg.sender, address(this), assetIn);
+        address(asset).safeTransferFrom(msg.sender, address(this), assetIn);
         auction.buyDBR(assetIn, dbrOut, msg.sender);
     }
 
     function swapAssetForExactDbr(uint dbrOut, uint assetInMax) external returns (uint assetIn) {
         assetIn = getAssetIn(dbrOut);
         require(assetIn <= assetInMax, "assetIn must be less than assetInMax");
-        asset.transferFrom(msg.sender, address(this), assetIn);
+        address(asset).safeTransferFrom(msg.sender, address(this), assetIn);
         auction.buyDBR(assetIn, dbrOut, msg.sender);
     }
 
