@@ -15,17 +15,17 @@ contract AuctionMainnetDeployerScript is Script {
         address handler = address(0);
 
         address gov = 0x926dF14a23BE491164dCF93f4c468A50ef659D5B;
-        address fedChair = 0x8F97cCA30Dbe80e7a8B462F1dD1a51C32accDfC8;
-        address asset = 0x865377367054516e17014CcdED1e7d814EDC9ce4;
+        address twg = 0x9D5Df30F475CEA915b1ed4C0CCa59255C897b61B;
+        address asset = 0x41D5D79431A913C4aE7d69a668ecdfE5fF9DFB68;
         address dbr = 0xAD038Eb671c44b853887A7E32528FaB35dC5D710;
 
-        // 5:1 ratio, implying a 20c DBR starting price
-        uint assetReserve = 500_000 * 1e18;
-        uint dbrReserve = assetReserve * 5;
+        // 400:1 ratio, implying a 5c DBR starting price ($20 INV / 400 = $0.05 DBR)
+        uint assetReserve = 1_250 * 1e18;
+        uint dbrReserve = assetReserve * 400; // 500_000 DBR
 
         Auction auction = new Auction(
             gov,
-            fedChair,
+            twg,
             dbr,
             asset,
             handler,
