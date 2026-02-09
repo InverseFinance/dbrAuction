@@ -119,6 +119,7 @@ contract Auction {
         require(newDbrReserve > 0, "Resulting DBR reserve must be positive");
         assetReserve = _assetReserve;
         dbrReserve = newDbrReserve;
+        emit SetAssetReserve(_assetReserve, newDbrReserve);
     }
 
     // changes K to preserve the ratio (price)
@@ -128,6 +129,7 @@ contract Auction {
         require(newAssetReserve > 0, "Resulting asset reserve must be positive");
         dbrReserve = _dbrReserve;
         assetReserve = newAssetReserve;
+        emit SetDbrReserve(_dbrReserve, newAssetReserve);
     }
 
     function overrideReserves(uint _dbrReserve, uint _assetReserve) external onlyGov {
@@ -136,6 +138,7 @@ contract Auction {
         assetReserve = _assetReserve;
         dbrReserve = _dbrReserve;
         lastUpdate = block.timestamp;
+        emit OverrideReserves(_assetReserve, _dbrReserve);
     }
 
     function buyDBR(uint exactAssetIn, uint exactDbrOut, address to) external updateReserves {
@@ -156,6 +159,7 @@ contract Auction {
         uint amount = bal > capacity ? capacity : bal;
         address(asset).safeTransfer(address(saleHandler), amount);
         saleHandler.onReceive();
+        emit SendToSaleHandler(amount);
     }
 
     // only if no sale handler is set
@@ -164,6 +168,7 @@ contract Auction {
         uint bal = asset.balanceOf(address(this));
         require(bal > 0, "No asset to send");
         address(asset).safeTransfer(gov, bal);
+        emit SendToGov(bal);
     }
 
     function sweep(address token, address destination, uint amount) external onlyGov {
@@ -171,6 +176,11 @@ contract Auction {
     }
 
     event Buy(address indexed caller, address indexed to, uint assetIn, uint dbrOut);
+    event SetAssetReserve(uint assetReserve, uint dbrReserve);
+    event SetDbrReserve(uint dbrReserve, uint assetReserve);
+    event OverrideReserves(uint assetReserve, uint dbrReserve);
+    event SendToSaleHandler(uint amount);
+    event SendToGov(uint amount);
     event RateUpdate(uint newRate);
     event MaxRateUpdate(uint newMaxRate);
     event MinRateUpdate(uint newMinRate);
