@@ -1,58 +1,61 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+
 interface IAuction {
-    function getCurrentReserves() external view returns (uint dolaReserve, uint dbrReserve);
-    function buyDBR(uint exactDolaIn, uint exactDbrOut, address to) external;
+    function getCurrentReserves() external view returns (uint assetReserve, uint dbrReserve);
+    function buyDBR(uint exactAssetIn, uint exactDbrOut, address to) external;
 }
 
 interface IERC20 {
-    function approve(address,uint) external returns (bool);
-    function transferFrom(address,address,uint) external returns (bool);
+    function balanceOf(address) external view returns (uint);
 }
 
 contract Helper {
 
+    using SafeTransferLib for address;
+
     IAuction public immutable auction;
-    IERC20 public immutable dola;
+    IERC20 public immutable asset;
 
     constructor(
         address _auction,
-        address _dola
+        address _asset
     ) {
         auction = IAuction(_auction);
-        dola = IERC20(_dola);
-        dola.approve(_auction, type(uint).max);
+        asset = IERC20(_asset);
+        address(asset).safeApprove(_auction, type(uint).max);
     }
     
-    function getDbrOut(uint dolaIn) public view returns (uint dbrOut) {
-        require(dolaIn > 0, "dolaIn must be positive");
-        (uint dolaReserve, uint dbrReserve) = auction.getCurrentReserves();
-        uint numerator = dolaIn * dbrReserve;
-        uint denominator = dolaReserve + dolaIn;
+    function getDbrOut(uint assetIn) public view returns (uint dbrOut) {
+        require(assetIn > 0, "assetIn must be positive");
+        (uint assetReserve, uint dbrReserve) = auction.getCurrentReserves();
+        uint numerator = assetIn * dbrReserve;
+        uint denominator = assetReserve + assetIn;
         dbrOut = numerator / denominator;
     }
 
-    function getDolaIn(uint dbrOut) public view returns (uint dolaIn) {
+    function getAssetIn(uint dbrOut) public view returns (uint assetIn) {
         require(dbrOut > 0, "dbrOut must be positive");
-        (uint dolaReserve, uint dbrReserve) = auction.getCurrentReserves();
-        uint numerator = dbrOut * dolaReserve;
+        (uint assetReserve, uint dbrReserve) = auction.getCurrentReserves();
+        uint numerator = dbrOut * assetReserve;
         uint denominator = dbrReserve - dbrOut;
-        dolaIn = (numerator / denominator) + 1;
+        assetIn = (numerator / denominator) + 1;
     }
 
-    function swapExactDolaForDbr(uint dolaIn, uint dbrOutMin) external returns (uint dbrOut) {
-        dbrOut = getDbrOut(dolaIn);
+    function swapExactAssetForDbr(uint assetIn, uint dbrOutMin) external returns (uint dbrOut) {
+        dbrOut = getDbrOut(assetIn);
         require(dbrOut >= dbrOutMin, "dbrOut must be greater than dbrOutMin");
-        dola.transferFrom(msg.sender, address(this), dolaIn);
-        auction.buyDBR(dolaIn, dbrOut, msg.sender);
+        address(asset).safeTransferFrom(msg.sender, address(this), assetIn);
+        auction.buyDBR(assetIn, dbrOut, msg.sender);
     }
 
-    function swapDolaForExactDbr(uint dbrOut, uint dolaInMax) external returns (uint dolaIn) {
-        dolaIn = getDolaIn(dbrOut);
-        require(dolaIn <= dolaInMax, "dolaIn must be less than dolaInMax");
-        dola.transferFrom(msg.sender, address(this), dolaIn);
-        auction.buyDBR(dolaIn, dbrOut, msg.sender);
+    function swapAssetForExactDbr(uint dbrOut, uint assetInMax) external returns (uint assetIn) {
+        assetIn = getAssetIn(dbrOut);
+        require(assetIn <= assetInMax, "assetIn must be less than assetInMax");
+        address(asset).safeTransferFrom(msg.sender, address(this), assetIn);
+        auction.buyDBR(assetIn, dbrOut, msg.sender);
     }
 
 }
